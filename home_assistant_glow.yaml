@@ -97,7 +97,7 @@ sensor:
     icon: mdi:flash-outline
     accuracy_decimals: 0
     pin: ${pulse_pin}
-    # internal_filter: 100ms
+    internal_filter: 100ms
     on_value:
       then:
         - light.turn_on:
@@ -109,6 +109,18 @@ sensor:
       # multiply value = (60 / imp value) * 1000
       # - multiply: 60
       - lambda: return x * ((60.0 / ${pulse_rate}) * 1000.0);
+      - lambda: |-
+          float MAX_DIFFERENCE = 24000.0;  // adjust this!
+          static float last_value_t = NAN;
+          static int count_missed_t = 0;
+          if (count_missed_t == 3) last_value_t = x;
+          if (isnan(last_value_t) || std::abs(x - last_value_t) < MAX_DIFFERENCE) {
+            count_missed_t = 0;
+            return last_value_t = x;
+          } else {
+            count_missed_t += 1;
+            return last_value_t;
+          }
     total:
       name: '${friendly_name} - Total energy'
       unit_of_measurement: 'kWh'
